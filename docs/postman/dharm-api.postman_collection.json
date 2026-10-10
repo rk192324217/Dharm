@@ -2,7 +2,7 @@
   "version": "2.1.0",
   "info": {
     "name": "Dharm API",
-    "description": "Dharm food rescue API – WeMakeDevs Environmental Hack 2026.\n\nBefore running:\n1. Select the 'Dharm Local' or 'Dharm AWS' environment.\n2. Set BASE_URL in the environment.\n   Local (sam local):  http://localhost:3000\n   Deployed AWS:       https://<api-id>.execute-api.<region>.amazonaws.com/dev\n\nPhase 2: Donation CRUD endpoints added. Auth is not yet enforced; donorId is passed in the body.",
+    "description": "Dharm food rescue API – WeMakeDevs Environmental Hack 2026.\n\nPhases 1-4 Complete: Users, Matching, Donations, Requests Workflow.\n\nAuth Note: Endpoints are open for testing. Provide `donorId` or `receiverId` in the body where required.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -13,23 +13,64 @@
           "name": "GET /api/health",
           "request": {
             "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{BASE_URL}}/api/health",
-              "host": ["{{BASE_URL}}"],
-              "path": ["api", "health"]
+            "url": { "raw": "{{BASE_URL}}/api/health", "host": ["{{BASE_URL}}"], "path": ["api", "health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users & Organizations",
+      "item": [
+        {
+          "name": "POST /api/users (Create Receiver)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Mumbai Food Bank\",\n  \"role\": \"RECEIVER\",\n  \"organizationName\": \"Mumbai Food Bank Trust\",\n  \"latitude\": 19.076,\n  \"longitude\": 72.877,\n  \"serviceRadiusKm\": 25,\n  \"collectionCapacity\": 500\n}"
             },
-            "description": "Liveness check. No authentication required."
-          },
-          "response": [
-            {
-              "name": "200 OK",
-              "status": "OK",
-              "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"status\": \"ok\",\n    \"version\": \"0.1.0\",\n    \"environment\": \"dev\",\n    \"timestamp\": \"2026-10-10T07:00:00.000Z\"\n  }\n}"
+            "url": { "raw": "{{BASE_URL}}/api/users", "host": ["{{BASE_URL}}"], "path": ["api", "users"] }
+          }
+        },
+        {
+          "name": "GET /api/users/{userId}",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE_URL}}/api/users/{{receiverId}}", "host": ["{{BASE_URL}}"], "path": ["api", "users", "{{receiverId}}"] }
+          }
+        },
+        {
+          "name": "GET /api/organizations/nearby (Proximity)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{BASE_URL}}/api/organizations/nearby?lat=19.076&lng=72.877&radiusKm=50",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "organizations", "nearby"],
+              "query": [
+                {"key": "lat", "value": "19.076"},
+                {"key": "lng", "value": "72.877"},
+                {"key": "radiusKm", "value": "50"}
+              ]
             }
-          ]
+          }
+        },
+        {
+          "name": "GET /api/organizations/nearby (Match Mode)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{BASE_URL}}/api/organizations/nearby?lat=19.076&lng=72.877&donationId={{donationId}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "organizations", "nearby"],
+              "query": [
+                {"key": "lat", "value": "19.076"},
+                {"key": "lng", "value": "72.877"},
+                {"key": "donationId", "value": "{{donationId}}"}
+              ]
+            }
+          }
         }
       ]
     },
@@ -37,92 +78,79 @@
       "name": "Donations",
       "item": [
         {
-          "name": "POST /api/donations – create donation",
+          "name": "POST /api/donations",
           "request": {
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"donorId\": \"donor-001\",\n  \"title\": \"Leftover biryani from wedding\",\n  \"description\": \"Freshly cooked chicken biryani, approximately 50 servings. Made this morning.\",\n  \"foodCategory\": \"COOKED_MEAL\",\n  \"dietaryInformation\": \"Contains chicken. Halal certified.\",\n  \"allergens\": [\"gluten\", \"dairy\"],\n  \"quantity\": 50,\n  \"unit\": \"servings\",\n  \"preparedAt\": \"2026-10-10T06:00:00Z\",\n  \"storageConditions\": \"REFRIGERATED\",\n  \"pickupDeadline\": \"2026-10-10T14:00:00Z\",\n  \"latitude\": 19.076,\n  \"longitude\": 72.877,\n  \"approximateLocation\": \"Andheri West, Mumbai\"\n}"
+              "raw": "{\n  \"donorId\": \"donor-001\",\n  \"title\": \"Leftover biryani\",\n  \"foodCategory\": \"COOKED_MEAL\",\n  \"quantity\": 50,\n  \"unit\": \"servings\",\n  \"preparedAt\": \"2026-10-10T06:00:00Z\",\n  \"pickupDeadline\": \"2026-10-10T22:00:00Z\",\n  \"latitude\": 19.076,\n  \"longitude\": 72.877\n}"
             },
-            "url": {
-              "raw": "{{BASE_URL}}/api/donations",
-              "host": ["{{BASE_URL}}"],
-              "path": ["api", "donations"]
-            },
-            "description": "Create a food donation. donorId is temporary (Phase 2); Phase 3 will derive it from the Cognito JWT."
-          },
-          "response": [
-            {
-              "name": "201 Created",
-              "status": "Created",
-              "code": 201,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"donationId\": \"a1b2c3d4-uuid\",\n    \"donorId\": \"donor-001\",\n    \"title\": \"Leftover biryani from wedding\",\n    \"status\": \"AVAILABLE\",\n    \"createdAt\": \"2026-10-10T07:30:00.000Z\",\n    \"updatedAt\": \"2026-10-10T07:30:00.000Z\"\n  }\n}"
-            },
-            {
-              "name": "400 Validation Error",
-              "status": "Bad Request",
-              "code": 400,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
-              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"message\": \"One or more fields are invalid.\",\n    \"details\": [\n      {\"field\": \"pickupDeadline\", \"message\": \"pickupDeadline must be in the future.\"}\n    ]\n  }\n}"
-            }
-          ]
-        },
-        {
-          "name": "GET /api/donations – list available",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{BASE_URL}}/api/donations?status=AVAILABLE&limit=20",
-              "host": ["{{BASE_URL}}"],
-              "path": ["api", "donations"],
-              "query": [
-                {"key": "status", "value": "AVAILABLE", "description": "Filter by status: AVAILABLE | RESERVED | COLLECTED | EXPIRED | CANCELLED"},
-                {"key": "category", "value": "", "description": "Optional: COOKED_MEAL | BAKERY | PRODUCE | DAIRY | PACKAGED | BEVERAGES | OTHER", "disabled": true},
-                {"key": "limit", "value": "20"},
-                {"key": "nextToken", "value": "", "description": "Pagination cursor from previous response", "disabled": true}
-              ]
-            },
-            "description": "List donations. Exact coordinates are not returned. Use nextToken for pagination."
+            "url": { "raw": "{{BASE_URL}}/api/donations", "host": ["{{BASE_URL}}"], "path": ["api", "donations"] }
           }
         },
         {
-          "name": "GET /api/donations/{donationId} – get one",
+          "name": "GET /api/donations",
           "request": {
             "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{BASE_URL}}/api/donations/{{donationId}}",
-              "host": ["{{BASE_URL}}"],
-              "path": ["api", "donations", "{{donationId}}"]
+            "url": { "raw": "{{BASE_URL}}/api/donations", "host": ["{{BASE_URL}}"], "path": ["api", "donations"] }
+          }
+        },
+        {
+          "name": "GET /api/donations/{donationId}",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE_URL}}/api/donations/{{donationId}}", "host": ["{{BASE_URL}}"], "path": ["api", "donations", "{{donationId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Requests Workflow",
+      "item": [
+        {
+          "name": "1. POST request collection",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiverId\": \"{{receiverId}}\",\n  \"requestedQuantity\": 50\n}"
             },
-            "description": "Get a single donation by ID. Exact coordinates are hidden from non-donors."
-          },
-          "response": [
-            {
-              "name": "404 Not Found",
-              "status": "Not Found",
-              "code": 404,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
-              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"NOT_FOUND\",\n    \"message\": \"Donation don-999 not found.\"\n  }\n}"
-            }
-          ]
+            "url": { "raw": "{{BASE_URL}}/api/donations/{{donationId}}/requests", "host": ["{{BASE_URL}}"], "path": ["api", "donations", "{{donationId}}", "requests"] }
+          }
+        },
+        {
+          "name": "2. POST accept request",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"donorId\": \"donor-001\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/requests/{{requestId}}/accept", "host": ["{{BASE_URL}}"], "path": ["api", "requests", "{{requestId}}", "accept"] }
+          }
+        },
+        {
+          "name": "3. POST mark collected",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiverId\": \"{{receiverId}}\",\n  \"status\": \"COLLECTED\",\n  \"note\": \"Successfully picked up\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/requests/{{requestId}}/status", "host": ["{{BASE_URL}}"], "path": ["api", "requests", "{{requestId}}", "status"] }
+          }
         }
       ]
     }
   ],
   "variable": [
-    {
-      "key": "BASE_URL",
-      "value": "http://localhost:3000",
-      "description": "Override with your deployed API base URL"
-    },
-    {
-      "key": "donationId",
-      "value": "replace-with-a-real-donationId",
-      "description": "Set this after creating a donation"
-    }
+    { "key": "BASE_URL", "value": "http://localhost:3000" },
+    { "key": "donationId", "value": "set-me" },
+    { "key": "receiverId", "value": "set-me" },
+    { "key": "requestId", "value": "set-me" }
   ]
 }

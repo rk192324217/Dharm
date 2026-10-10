@@ -308,6 +308,98 @@ Resources:
         External:
           - "@aws-sdk/*"
 
+
+  # ── Organization & User Functions ─────────────────────────────────────────
+
+  NearbyOrganizationsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub dharm-nearby-organizations-${Environment}
+      Description: GET /api/organizations/nearby – find and rank eligible receivers
+      Handler: organizations.nearbyOrgsHandler
+      CodeUri: ./
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBReadPolicy:
+            TableName: !Ref UsersTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref DonationsTable
+      Events:
+        NearbyOrganizations:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DharmApi
+            Path: /api/organizations/nearby
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/organizations.ts
+        External:
+          - "@aws-sdk/*"
+
+  CreateUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub dharm-create-user-${Environment}
+      Description: POST /api/users
+      Handler: organizations.createUserHandler
+      CodeUri: ./
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+      Events:
+        CreateUser:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DharmApi
+            Path: /api/users
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/organizations.ts
+        External:
+          - "@aws-sdk/*"
+
+  GetUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub dharm-get-user-${Environment}
+      Description: GET /api/users/{userId}
+      Handler: organizations.getUserHandler
+      CodeUri: ./
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBReadPolicy:
+            TableName: !Ref UsersTable
+      Events:
+        GetUser:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DharmApi
+            Path: /api/users/{userId}
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/organizations.ts
+        External:
+          - "@aws-sdk/*"
+
   # ── DynamoDB Tables ───────────────────────────────────────────────────────
   # All tables use PAY_PER_REQUEST billing.
   # This means zero cost at zero traffic – appropriate for a hackathon.

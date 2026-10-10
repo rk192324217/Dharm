@@ -20,9 +20,10 @@
 
 ## Current Phase
 
-**Phase 1 complete** – Repository skeleton, TypeScript project, health endpoint, unit tests.
+**Phase 1-4 complete** – Repository skeleton, Health, Donations, Requests Workflow, and User/Organization matching.
+**Phase 5 complete** – Integration readiness, API Contract, Postman collection updated.
 
-**Phase 2 is next** – Donation APIs (POST /donations, GET /donations, GET /donations/{id}).
+**Next Phase (Phase 6)** – Connect the frontend and deploy on AWS.
 
 ---
 
@@ -39,56 +40,37 @@
 
 | Table | Key | GSIs | Access patterns |
 |-------|-----|------|-----------------|
-| `dharm-users-{env}` | `userId` (hash) | — | Get user by ID |
+| `dharm-users-{env}` | `userId` (hash) | `role-createdAt-index` | Get user by ID; list by role |
 | `dharm-donations-{env}` | `donationId` (hash) | `status-createdAt-index` | Get by ID; list by status+time |
 | `dharm-requests-{env}` | `requestId` (hash) | `donationId-index`, `receiverId-index` | Get by ID; find by donation; find by receiver |
 
 ---
 
-## Files Created in Phase 1
+## Files Created
 
-```
-package.json                          TypeScript + Jest + esbuild project
-tsconfig.json                         Strict TypeScript, targets ES2020/CommonJS
-jest.config.ts                        Jest with ts-jest, @/ path alias
-src/types/index.ts                    Shared domain types and API response shapes
-src/handlers/health.ts                GET /api/health Lambda handler
-tests/unit/health.test.ts             9 unit tests for health handler
-template.yaml                         AWS SAM template (3 Lambda fns, 3 DDB tables)
-samconfig.toml.example                SAM deploy config template (copy to samconfig.toml)
-.env.example                          Environment variable documentation
-.gitignore                            node_modules, dist, .env, samconfig.toml
-events/health.json                    Sample API GW v2 event for sam local invoke
-docs/postman/dharm-api.postman_collection.json
-docs/postman/dharm-local.postman_environment.json
-README.md                             Full project documentation
-PROJECT_CONTEXT.md                    This file
-```
+See codebase for full file list. Notable files:
+- `src/services/matching.service.ts` – Pure Haversine distance and rule-based matching
+- `src/handlers/*.ts` – API entry points
+- `src/repositories/*.ts` – DynamoDB interactions
+- `docs/API_CONTRACT.md` – Full frontend integration guide
+- `docs/postman/dharm-api.postman_collection.json` – Test collection
 
 ---
 
-## Test Results (Phase 1)
+## Test Results
 
 Run after `npm install`:
 
 ```
 PASS tests/unit/health.test.ts
-  GET /api/health
-    ✓ returns HTTP 200
-    ✓ returns Content-Type: application/json
-    ✓ returns a valid JSON body
-    ✓ returns success: true
-    ✓ returns data.status === "ok"
-    ✓ returns data.version as a non-empty string
-    ✓ returns data.timestamp as an ISO 8601 UTC string
-    ✓ reflects NODE_ENV in data.environment
-    ✓ falls back to "unknown" when NODE_ENV is unset
+PASS tests/unit/donations.test.ts
+PASS tests/unit/requests.test.ts
+PASS tests/unit/matching.test.ts
 
-Test Suites: 1 passed, 1 total
-Tests:       9 passed, 9 total
+Test Suites: 4 passed, 4 total
+Tests:       118 passed, 118 total
+Snapshots:   0 total
 ```
-
-*(Update this section after actually running `npm test`.)*
 
 ---
 
@@ -149,11 +131,11 @@ Tests:       9 passed, 9 total
 
 ---
 
-## Next Three Tasks (Phase 2)
+## Next Tasks (Phase 6)
 
-1. **`npm install`** – Install dependencies and confirm `npm test` passes (9 tests green).
-2. **Implement `DonationRepository`** – `src/repositories/donation.repository.ts` with DynamoDB DocumentClient, using conditional writes.
-3. **Implement `POST /api/donations`** – `src/handlers/donations.ts` with Zod or manual validation of all required fields, server-generated IDs, and correct status codes.
+1. **Cognito Auth Integration** – Enforce identity using API Gateway JWT authorizers. Extract `donorId`/`receiverId` from the JWT `sub` instead of the request body.
+2. **Frontend Connection** – Use the updated Postman collection and `docs/API_CONTRACT.md` to connect the client app.
+3. **AWS Deployment** – Run `sam build` and `sam deploy --guided` to deploy the final stack to AWS.
 
 ---
 
@@ -170,8 +152,8 @@ Tests:       9 passed, 9 total
 
 ## Handoff Notes for Next Session
 
-Person A (frontend): No frontend tasks in Phase 1. API contract will be documented in `docs/API_CONTRACT.md` after Phase 2.
+Person A (frontend): API contract is fully documented in `docs/API_CONTRACT.md`. Use the Postman collection to test locally.
 
-Person B (backend): Run `npm install` and `npm test` first. Then start Phase 2 with the donation repository.
+Person B (backend): Run `npm install` and `npm test` first. Then start Phase 6 with the Cognito JWT authorizer setup in `template.yaml`.
 
 When resuming with an AI model: share this file first, then run `git status` and `npm test`. Do not rewrite working handlers — extend incrementally.
