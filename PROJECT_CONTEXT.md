@@ -22,8 +22,9 @@
 
 **Phase 1-4 complete** – Repository skeleton, Health, Donations, Requests Workflow, and User/Organization matching.
 **Phase 5 complete** – Integration readiness, API Contract, Postman collection updated.
+**Frontend Implementation complete** - Built Next.js UI using Fiery Blue design system, integrated with Mock API.
 
-**Next Phase (Phase 6)** – Connect the frontend and deploy on AWS.
+**Next Phase (Phase 6)** – Final Deployment Readiness & AWS Deployment (BLOCKED awaiting user approval).
 
 ---
 
@@ -131,11 +132,12 @@ Snapshots:   0 total
 
 ---
 
-## Next Tasks (Phase 6)
+## Next Tasks (Phase 6 & 7)
 
 1. **Cognito Auth Integration** – Enforce identity using API Gateway JWT authorizers. Extract `donorId`/`receiverId` from the JWT `sub` instead of the request body.
-2. **Frontend Connection** – Use the updated Postman collection and `docs/API_CONTRACT.md` to connect the client app.
-3. **AWS Deployment** – Run `sam build` and `sam deploy --guided` to deploy the final stack to AWS.
+2. **Frontend Connection** – Frontend UI (`frontend/src/lib/api.ts`) is currently in Mock Mode. When deployed, configure `NEXT_PUBLIC_API_BASE_URL` to point to the API Gateway.
+3. **API Verification** - Documented limitations in `docs/API_LIMITATIONS.md`. Created deployment readiness checklist in `docs/DEPLOYMENT_CHECKLIST.md`.
+4. **AWS Deployment** – Run `sam build` and `sam deploy --guided` to deploy the final stack to AWS (Currently blocked pending explicit user authorization).
 
 ---
 
