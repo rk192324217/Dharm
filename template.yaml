@@ -1,0 +1,230 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Dharm – Food Rescue API
+  WeMakeDevs Environmental Hack 2026
+  Serverless food rescue platform connecting donors to receiving organisations.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Global defaults applied to every AWS::Serverless::Function resource
+# ─────────────────────────────────────────────────────────────────────────────
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    MemorySize: 256       # 256 MB – smallest practical for TypeScript cold start
+    Timeout: 10           # 10 s – sufficient for DynamoDB reads/writes
+    Architectures:
+      - arm64             # Graviton2: ~20% cheaper, faster cold start than x86
+    Environment:
+      Variables:
+        NODE_ENV:        !Ref Environment
+        DONATIONS_TABLE: !Ref DonationsTable
+        USERS_TABLE:     !Ref UsersTable
+        REQUESTS_TABLE:  !Ref RequestsTable
+        LOG_LEVEL:       !Ref LogLevel
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Deployment parameters – override in samconfig.toml or via --parameter-overrides
+# ─────────────────────────────────────────────────────────────────────────────
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+    Description: Deployment environment (affects table names and logging).
+
+  LogLevel:
+    Type: String
+    Default: info
+    AllowedValues: [debug, info, warn, error]
+    Description: Application log level (structured JSON logs).
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Resources
+# ─────────────────────────────────────────────────────────────────────────────
+Resources:
+
+  # ── API Gateway HTTP API ──────────────────────────────────────────────────
+  # HTTP API (v2) is cheaper than REST API (v1) and sufficient for this project.
+  # Cost note: $1.00 per million requests – effectively free at hackathon scale.
+  DharmApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Environment
+      Description: Dharm food rescue API
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"           # TODO: restrict to frontend origin before production
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        MaxAge: 600
+
+  # ── Health Function ───────────────────────────────────────────────────────
+  HealthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub dharm-health-${Environment}
+      Description: GET /api/health – liveness check, no auth required
+      Handler: health.handler
+      CodeUri: ./
+      # IAM: health function needs no resource permissions
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Events:
+        HealthGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DharmApi
+            Path: /api/health
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/health.ts
+        External:
+          - "@aws-sdk/*"    # AWS SDK is provided by the Lambda runtime
+
+  # ── DynamoDB Tables ───────────────────────────────────────────────────────
+  # All tables use PAY_PER_REQUEST billing.
+  # This means zero cost at zero traffic – appropriate for a hackathon.
+  # Cost note: $1.25 per million write units, $0.25 per million read units.
+
+  # Users table
+  # Access patterns:
+  #   - Get user by userId (primary key lookup)
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub dharm-users-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: false  # saves cost; enable for production
+      Tags:
+        - Key: Project
+          Value: Dharm
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Donations table
+  # Access patterns:
+  #   - Get donation by donationId           → primary key
+  #   - List donations by status + time      → GSI status-createdAt-index
+  DonationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub dharm-donations-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: donationId
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: donationId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: status-createdAt-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: false
+      Tags:
+        - Key: Project
+          Value: Dharm
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Requests table
+  # Access patterns:
+  #   - Get request by requestId             → primary key
+  #   - Find all requests for a donation     → GSI donationId-index
+  #   - Find all requests by a receiver      → GSI receiverId-index
+  RequestsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub dharm-requests-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: requestId
+          AttributeType: S
+        - AttributeName: donationId
+          AttributeType: S
+        - AttributeName: receiverId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: requestId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: donationId-index
+          KeySchema:
+            - AttributeName: donationId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: receiverId-index
+          KeySchema:
+            - AttributeName: receiverId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: false
+      Tags:
+        - Key: Project
+          Value: Dharm
+        - Key: Environment
+          Value: !Ref Environment
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Outputs – printed after sam deploy, useful for Postman environment setup
+# ─────────────────────────────────────────────────────────────────────────────
+Outputs:
+  ApiBaseUrl:
+    Description: HTTP API base URL (set this as BASE_URL in Postman)
+    Value: !Sub "https://${DharmApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+    Export:
+      Name: !Sub dharm-api-base-url-${Environment}
+
+  HealthEndpoint:
+    Description: Health check URL – test with curl or Postman
+    Value: !Sub "https://${DharmApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/api/health"
+
+  DonationsTableName:
+    Description: DynamoDB donations table name
+    Value: !Ref DonationsTable
+    Export:
+      Name: !Sub dharm-donations-table-${Environment}
+
+  UsersTableName:
+    Description: DynamoDB users table name
+    Value: !Ref UsersTable
+    Export:
+      Name: !Sub dharm-users-table-${Environment}
+
+  RequestsTableName:
+    Description: DynamoDB requests table name
+    Value: !Ref RequestsTable
+    Export:
+      Name: !Sub dharm-requests-table-${Environment}

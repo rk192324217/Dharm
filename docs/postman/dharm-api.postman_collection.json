@@ -1,0 +1,49 @@
+{
+  "version": "2.1.0",
+  "info": {
+    "name": "Dharm API",
+    "description": "Dharm food rescue API – WeMakeDevs Environmental Hack 2026.\n\nBefore running:\n1. Select the 'Dharm Local' or 'Dharm AWS' environment.\n2. Set BASE_URL in the environment to your API root.\n   Local (sam local):  http://localhost:3000\n   Deployed AWS:       https://<api-id>.execute-api.<region>.amazonaws.com/dev\n\nEndpoints are grouped by resource. Run the Health request first to confirm the API is reachable.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /api/health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/health",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Liveness check. Expects HTTP 200 with { success: true, data: { status: 'ok', ... } }. No authentication required."
+          },
+          "response": [
+            {
+              "name": "200 OK – healthy",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{BASE_URL}}/api/health" }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"status\": \"ok\",\n    \"version\": \"0.1.0\",\n    \"environment\": \"dev\",\n    \"timestamp\": \"2026-10-10T07:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:3000",
+      "description": "Override with your deployed API base URL"
+    }
+  ]
+}

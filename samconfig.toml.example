@@ -1,0 +1,49 @@
+# samconfig.toml.example
+# ─────────────────────────────────────────────────────────────────────────────
+# Copy this file to samconfig.toml and fill in your values.
+# DO NOT commit samconfig.toml – it is listed in .gitignore.
+# ─────────────────────────────────────────────────────────────────────────────
+
+version = 0.1
+
+[default]
+[default.deploy]
+[default.deploy.parameters]
+
+# Your AWS account ID – find it in the AWS Console top-right menu
+# or run: aws sts get-caller-identity --query Account --output text
+# aws_account_id = "123456789012"    # informational only, not a SAM parameter
+
+# AWS region to deploy into (e.g. ap-south-1 for Mumbai)
+region = "ap-south-1"
+
+# CloudFormation stack name – can be anything, must be unique in your account+region
+stack_name = "dharm-dev"
+
+# S3 bucket used by SAM to upload Lambda packages.
+# SAM can create this automatically with --resolve-s3.
+# If you create it manually: aws s3 mb s3://dharm-sam-artifacts-<your-account-id>
+s3_prefix = "dharm"
+
+# Confirm before creating/updating resources (set to false for CI)
+confirm_changeset = true
+
+# Show detailed CloudFormation events during deploy
+capabilities = "CAPABILITY_IAM"
+
+# Parameter overrides (Environment, LogLevel)
+parameter_overrides = "Environment=dev LogLevel=info"
+
+# ── Usage ─────────────────────────────────────────────────────────────────────
+# First deploy:
+#   sam build
+#   sam deploy --guided          ← interactive, writes samconfig.toml
+#
+# Subsequent deploys:
+#   sam build && sam deploy
+#
+# View logs after deploy:
+#   sam logs -n HealthFunction --stack-name dharm-dev --tail
+#
+# Delete all resources (CAUTION – destroys tables):
+#   sam delete --stack-name dharm-dev

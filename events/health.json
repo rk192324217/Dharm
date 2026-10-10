@@ -1,0 +1,13 @@
+{
+  "httpMethod": "GET",
+  "headers": {
+    "Accept": "application/json"
+  },
+  "rawPath": "/api/health",
+  "requestContext": {
+    "http": {
+      "method": "GET",
+      "path": "/api/health"
+    }
+  }
+}
