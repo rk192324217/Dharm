@@ -182,6 +182,132 @@ Resources:
         External:
           - "@aws-sdk/*"
 
+  # ── Request Workflow Functions ────────────────────────────────────────────
+  # These functions use TransactWrite across both DonationsTable and
+  # RequestsTable, so they need CRUD access to both.
+
+  CreateRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub dharm-create-request-${Environment}
+      Description: POST /api/donations/{donationId}/requests
+      Handler: requests.createRequestHandler
+      CodeUri: ./
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBReadPolicy:
+            TableName: !Ref DonationsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RequestsTable
+      Events:
+        CreateRequest:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DharmApi
+            Path: /api/donations/{donationId}/requests
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/requests.ts
+        External:
+          - "@aws-sdk/*"
+
+  AcceptRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub dharm-accept-request-${Environment}
+      Description: POST /api/requests/{requestId}/accept – atomic TransactWrite
+      Handler: requests.acceptRequestHandler
+      CodeUri: ./
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DonationsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RequestsTable
+      Events:
+        AcceptRequest:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DharmApi
+            Path: /api/requests/{requestId}/accept
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/requests.ts
+        External:
+          - "@aws-sdk/*"
+
+  DeclineRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub dharm-decline-request-${Environment}
+      Description: POST /api/requests/{requestId}/decline
+      Handler: requests.declineRequestHandler
+      CodeUri: ./
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RequestsTable
+      Events:
+        DeclineRequest:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DharmApi
+            Path: /api/requests/{requestId}/decline
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/requests.ts
+        External:
+          - "@aws-sdk/*"
+
+  UpdateStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub dharm-update-status-${Environment}
+      Description: POST /api/requests/{requestId}/status – COLLECTED | FAILED
+      Handler: requests.updateStatusHandler
+      CodeUri: ./
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DonationsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RequestsTable
+      Events:
+        UpdateStatus:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DharmApi
+            Path: /api/requests/{requestId}/status
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/requests.ts
+        External:
+          - "@aws-sdk/*"
+
   # ── DynamoDB Tables ───────────────────────────────────────────────────────
   # All tables use PAY_PER_REQUEST billing.
   # This means zero cost at zero traffic – appropriate for a hackathon.
