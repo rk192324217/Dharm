@@ -93,6 +93,95 @@ Resources:
         External:
           - "@aws-sdk/*"    # AWS SDK is provided by the Lambda runtime
 
+  # ── Donation Functions ────────────────────────────────────────────────────
+
+  CreateDonationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub dharm-create-donation-${Environment}
+      Description: POST /api/donations – create a new food donation
+      Handler: donations.createDonationHandler
+      CodeUri: ./
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DonationsTable
+      Events:
+        CreateDonation:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DharmApi
+            Path: /api/donations
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/donations.ts
+        External:
+          - "@aws-sdk/*"
+
+  ListDonationsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub dharm-list-donations-${Environment}
+      Description: GET /api/donations – list available donations
+      Handler: donations.listDonationsHandler
+      CodeUri: ./
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBReadPolicy:
+            TableName: !Ref DonationsTable
+      Events:
+        ListDonations:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DharmApi
+            Path: /api/donations
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/donations.ts
+        External:
+          - "@aws-sdk/*"
+
+  GetDonationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub dharm-get-donation-${Environment}
+      Description: GET /api/donations/{donationId} – retrieve a single donation
+      Handler: donations.getDonationHandler
+      CodeUri: ./
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBReadPolicy:
+            TableName: !Ref DonationsTable
+      Events:
+        GetDonation:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DharmApi
+            Path: /api/donations/{donationId}
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/donations.ts
+        External:
+          - "@aws-sdk/*"
+
   # ── DynamoDB Tables ───────────────────────────────────────────────────────
   # All tables use PAY_PER_REQUEST billing.
   # This means zero cost at zero traffic – appropriate for a hackathon.

@@ -2,7 +2,7 @@
   "version": "2.1.0",
   "info": {
     "name": "Dharm API",
-    "description": "Dharm food rescue API – WeMakeDevs Environmental Hack 2026.\n\nBefore running:\n1. Select the 'Dharm Local' or 'Dharm AWS' environment.\n2. Set BASE_URL in the environment to your API root.\n   Local (sam local):  http://localhost:3000\n   Deployed AWS:       https://<api-id>.execute-api.<region>.amazonaws.com/dev\n\nEndpoints are grouped by resource. Run the Health request first to confirm the API is reachable.",
+    "description": "Dharm food rescue API – WeMakeDevs Environmental Hack 2026.\n\nBefore running:\n1. Select the 'Dharm Local' or 'Dharm AWS' environment.\n2. Set BASE_URL in the environment.\n   Local (sam local):  http://localhost:3000\n   Deployed AWS:       https://<api-id>.execute-api.<region>.amazonaws.com/dev\n\nPhase 2: Donation CRUD endpoints added. Auth is not yet enforced; donorId is passed in the body.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -19,20 +19,94 @@
               "host": ["{{BASE_URL}}"],
               "path": ["api", "health"]
             },
-            "description": "Liveness check. Expects HTTP 200 with { success: true, data: { status: 'ok', ... } }. No authentication required."
+            "description": "Liveness check. No authentication required."
           },
           "response": [
             {
-              "name": "200 OK – healthy",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": { "raw": "{{BASE_URL}}/api/health" }
-              },
+              "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [{"key": "Content-Type", "value": "application/json"}],
               "body": "{\n  \"success\": true,\n  \"data\": {\n    \"status\": \"ok\",\n    \"version\": \"0.1.0\",\n    \"environment\": \"dev\",\n    \"timestamp\": \"2026-10-10T07:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Donations",
+      "item": [
+        {
+          "name": "POST /api/donations – create donation",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"donorId\": \"donor-001\",\n  \"title\": \"Leftover biryani from wedding\",\n  \"description\": \"Freshly cooked chicken biryani, approximately 50 servings. Made this morning.\",\n  \"foodCategory\": \"COOKED_MEAL\",\n  \"dietaryInformation\": \"Contains chicken. Halal certified.\",\n  \"allergens\": [\"gluten\", \"dairy\"],\n  \"quantity\": 50,\n  \"unit\": \"servings\",\n  \"preparedAt\": \"2026-10-10T06:00:00Z\",\n  \"storageConditions\": \"REFRIGERATED\",\n  \"pickupDeadline\": \"2026-10-10T14:00:00Z\",\n  \"latitude\": 19.076,\n  \"longitude\": 72.877,\n  \"approximateLocation\": \"Andheri West, Mumbai\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/donations",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "donations"]
+            },
+            "description": "Create a food donation. donorId is temporary (Phase 2); Phase 3 will derive it from the Cognito JWT."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"donationId\": \"a1b2c3d4-uuid\",\n    \"donorId\": \"donor-001\",\n    \"title\": \"Leftover biryani from wedding\",\n    \"status\": \"AVAILABLE\",\n    \"createdAt\": \"2026-10-10T07:30:00.000Z\",\n    \"updatedAt\": \"2026-10-10T07:30:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Validation Error",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"message\": \"One or more fields are invalid.\",\n    \"details\": [\n      {\"field\": \"pickupDeadline\", \"message\": \"pickupDeadline must be in the future.\"}\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/donations – list available",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/donations?status=AVAILABLE&limit=20",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "donations"],
+              "query": [
+                {"key": "status", "value": "AVAILABLE", "description": "Filter by status: AVAILABLE | RESERVED | COLLECTED | EXPIRED | CANCELLED"},
+                {"key": "category", "value": "", "description": "Optional: COOKED_MEAL | BAKERY | PRODUCE | DAIRY | PACKAGED | BEVERAGES | OTHER", "disabled": true},
+                {"key": "limit", "value": "20"},
+                {"key": "nextToken", "value": "", "description": "Pagination cursor from previous response", "disabled": true}
+              ]
+            },
+            "description": "List donations. Exact coordinates are not returned. Use nextToken for pagination."
+          }
+        },
+        {
+          "name": "GET /api/donations/{donationId} – get one",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/donations/{{donationId}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "donations", "{{donationId}}"]
+            },
+            "description": "Get a single donation by ID. Exact coordinates are hidden from non-donors."
+          },
+          "response": [
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"NOT_FOUND\",\n    \"message\": \"Donation don-999 not found.\"\n  }\n}"
             }
           ]
         }
@@ -44,6 +118,11 @@
       "key": "BASE_URL",
       "value": "http://localhost:3000",
       "description": "Override with your deployed API base URL"
+    },
+    {
+      "key": "donationId",
+      "value": "replace-with-a-real-donationId",
+      "description": "Set this after creating a donation"
     }
   ]
 }
